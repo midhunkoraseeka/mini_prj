@@ -11,10 +11,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+import importlib
+
 import clean_data
 import eda
 import recommend
 from config import CLEAN_CSV, FEATURES, METRICS_PATH, MODEL_PATH, RANGES, TARGET
+
+for _m in (clean_data, eda, recommend):  # pick up edits to src/ without restarting Streamlit
+    importlib.reload(_m)
 
 TEAL, RED, AMBER = "#3b8ea5", "#d95f5f", "#e0a030"
 PRETTY = {f: f.replace("_", " ") for f in FEATURES}
@@ -37,7 +42,7 @@ div[data-testid="stMetric"] {background: rgba(59,142,165,.10); border-radius:10p
 </style>""", unsafe_allow_html=True)
 
 
-plt.rcParams["font.family"] = ["Inter", "Segoe UI", "DejaVu Sans"]  # first installed font wins
+plt.rcParams["font.family"] = ["Segoe UI", "DejaVu Sans"]  # first installed font wins
 import plotly.io as pio
 pio.templates["default"] = go.layout.Template(layout=dict(font=dict(family="Inter, Segoe UI, sans-serif")))
 pio.templates.default = "plotly+default"
@@ -209,10 +214,11 @@ with tab_predict:
         st.caption("Adjust the sliders to see how changes would move the probability.")
         w = st.columns(4)
         wi = {}
+        sig = hash(tuple(s[f] for f in FEATURES))  # new profile -> fresh sliders
         for i, f in enumerate(FEATURES):
             lo, hi = RANGES[f]
             step = 0.1 if f == "CGPA" else 1.0 if isinstance(lo, float) else 1
-            wi[f] = w[i % 4].slider(PRETTY[f], lo, hi, type(lo)(s[f]), step, key=f"wi_{f}")
+            wi[f] = w[i % 4].slider(PRETTY[f], lo, hi, type(lo)(s[f]), step, key=f"wi_{f}_{sig}")
         _, p_new = recommend.predict(bundle, wi)
         st.metric("Simulated placement probability", f"{p_new:.1%}", f"{(p_new - prob) * 100:+.1f} pts vs entered profile")
         st.caption("Predictions are statistical estimates from historical data, not guarantees.")
